@@ -9,11 +9,10 @@
  *
  * Description: The primary data structure for the user registry.
  */
-typedef struct User
-{
-	char username[50];
-	char password[50];
-	char status[20];
+typedef struct User {
+  char username[50];
+  char password[50];
+  char status[20];
 } User;
 
 /**
@@ -26,13 +25,12 @@ typedef struct User
  *
  * Description: Treats database rows as discrete objects for filtering.
  */
-typedef struct Message
-{
-	int id;
-	char from[50];
-	char to[50];
-	char message[256];
-	char timestamp[20];
+typedef struct Message {
+  int id;
+  char from[50];
+  char to[50];
+  char message[256];
+  char timestamp[20];
 } Message;
 
 #endif /* MODELS_H */
