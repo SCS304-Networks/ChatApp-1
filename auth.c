@@ -1,18 +1,17 @@
 #include "auth.h"
-#include "utils.h" // Teammate's standardized utilities
+#include "utils.h"
 #include <conio.h>
-#include <ctype.h> // Required for whitespace checking
+#include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
-
-// --- 1. Internal Security & Validation Helpers ---
+/* --- 1. Internal Security & Validation Helpers --- */
 
 /**
  * is_invalid_input - Checks for whitespace-only strings or the pipe character
  * @str: The string to validate
- * * Returns 1 if the input is blank, only spaces, or contains a pipe '|'.
+ *
+ * Return: 1 if the input is blank, only spaces, or contains a pipe '|'.
  * Returns 0 if the input is valid.
  */
 int is_invalid_input(const char *str) {
@@ -24,14 +23,19 @@ int is_invalid_input(const char *str) {
     if (!isspace((unsigned char)str[i])) {
       only_spaces = 0;
     }
-    if (str[i] == '|') { // Prevent corruption of the delimited file
+    if (str[i] == '|') { /* Prevent corruption of the delimited file */
       return 1;
     }
   }
   return only_spaces;
 }
 
-// XOR Symmetric Encryption
+/**
+ * toggle_encryption - Applies XOR Symmetric Encryption to a string
+ * @data: The string to encrypt or decrypt
+ *
+ * Return: void
+ */
 void toggle_encryption(char *data) {
   char key = 'X';
   for (int i = 0; i < (int)strlen(data); i++) {
@@ -39,15 +43,21 @@ void toggle_encryption(char *data) {
   }
 }
 
-// Masked input using getch() for Windows
+/**
+ * get_masked_password - Reads masked input using getch() for Windows
+ * @password: Buffer to store the password
+ * @max_len: Maximum length of the password
+ *
+ * Return: void
+ */
 void get_masked_password(char *password, int max_len) {
   int i = 0;
   char ch;
   while (i < max_len - 1) {
     ch = getch();
     if (ch == 13)
-      break;            // Enter key
-    else if (ch == 8) { // Backspace logic
+      break;            /* Enter key */
+    else if (ch == 8) { /* Backspace logic */
       if (i > 0) {
         i--;
         printf("\b \b");
@@ -61,18 +71,23 @@ void get_masked_password(char *password, int max_len) {
   printf("\n");
 }
 
-// --- 2. Registration Module ---
+/* --- 2. Registration Module --- */
 
+/**
+ * register_user - Handles the user registration process
+ *
+ * Return: void
+ */
 void register_user() {
   User newUser;
-  clear_screen(); //
+  clear_screen(); /* */
 
   printf("--- User Registration ---\n");
   printf("Enter Username: ");
   fgets(newUser.username, 50, stdin);
-  sanitize_input(newUser.username); //
+  sanitize_input(newUser.username); /* */
 
-  // Validate Username
+  /* Validate Username */
   if (is_invalid_input(newUser.username)) {
     printf("\n[!] Error: Username cannot be blank or contain '|'.\n");
     printf("Press Enter to return...");
@@ -80,7 +95,7 @@ void register_user() {
     return;
   }
 
-  // Check for Duplicates
+  /* Check for Duplicates */
   if (validate_unique_user(newUser.username) == 0) {
     printf("\n[!] Error: Username '%s' is already taken.\n", newUser.username);
     printf("Press Enter to return...");
@@ -91,7 +106,7 @@ void register_user() {
   printf("Enter Password: ");
   get_masked_password(newUser.password, 50);
 
-  // Validate Password
+  /* Validate Password */
   if (is_invalid_input(newUser.password)) {
     printf("\n[!] Error: Password cannot be blank or contain '|'.\n");
     printf("Press Enter to return...");
@@ -99,7 +114,7 @@ void register_user() {
     return;
   }
 
-  strcpy(newUser.status, "OFFLINE"); // Managed in RAM only
+  strcpy(newUser.status, "OFFLINE"); /* Managed in RAM only */
   commit_user_to_disk(newUser);
 
   printf("\n[+] Success: Account created for %s.\n", newUser.username);
@@ -107,6 +122,12 @@ void register_user() {
   getchar();
 }
 
+/**
+ * validate_unique_user - Checks if a username is unique in the registry
+ * @name: The username to check
+ *
+ * Return: 0 if a match is found, 1 if unique
+ */
 int validate_unique_user(char name[]) {
   FILE *f = fopen(REGISTRY_FILE, "r");
   if (!f)
@@ -114,28 +135,40 @@ int validate_unique_user(char name[]) {
 
   char file_user[50], file_pass[50];
 
-  // Scan the 2-column format
+  /* Scan the 2-column format */
   while (fscanf(f, " %[^|]|%s ", file_user, file_pass) == 2) {
     if (strcmp(file_user, name) == 0) {
       fclose(f);
-      return 0; // Match found
+      return 0; /* Match found */
     }
   }
   fclose(f);
-  return 1; // Unique
+  return 1; /* Unique */
 }
 
+/**
+ * commit_user_to_disk - Saves a user to the registry file
+ * @u: The user struct to save
+ *
+ * Return: void
+ */
 void commit_user_to_disk(User u) {
   FILE *f = fopen(REGISTRY_FILE, "a");
   if (f) {
     toggle_encryption(u.password);
-    fprintf(f, "%s|%s\n", u.username, u.password); // strictly 2 columns
+    fprintf(f, "%s|%s\n", u.username, u.password); /* strictly 2 columns */
     fclose(f);
   }
 }
 
-// --- 3. Login Module ---
+/* --- 3. Login Module --- */
 
+/**
+ * authenticate_user - Authenticates a user and starts a session
+ * @session: Pointer to the session User struct to populate on success
+ *
+ * Return: 1 on success, 0 on failure
+ */
 int authenticate_user(User *session) {
   char authBuffer_Name[50], authBuffer_Pass[50];
   char file_user[50], file_pass[50];
@@ -168,7 +201,7 @@ int authenticate_user(User *session) {
       successFlag = 1;
       strcpy(session->username, file_user);
       strcpy(session->password, authBuffer_Pass);
-      strcpy(session->status, "ACTIVE"); // Session state in RAM
+      strcpy(session->status, "ACTIVE"); /* Session state in RAM */
       break;
     }
   }
@@ -184,8 +217,14 @@ int authenticate_user(User *session) {
   }
 }
 
-// --- 4. Dashboard & Session ---
+/* --- 4. Dashboard & Session --- */
 
+/**
+ * initialize_dashboard - Prints the user dashboard
+ * @u: The authenticated user
+ *
+ * Return: void
+ */
 void initialize_dashboard(User u) {
   clear_screen();
   printf("================================\n");
@@ -194,14 +233,26 @@ void initialize_dashboard(User u) {
   printf("================================\n");
 }
 
+/**
+ * terminate_session - Logs out a user and clears volatile state
+ * @u: Pointer to the user session
+ *
+ * Return: void
+ */
 void terminate_session(User *u) {
-  strcpy(u->status, "OFFLINE"); // Volatile state reset
+  strcpy(u->status, "OFFLINE"); /* Volatile state reset */
   memset(u->username, 0, 50);
   memset(u->password, 0, 50);
 }
 
-// --- 5. Deregistration Module ---
+/* --- 5. Deregistration Module --- */
 
+/**
+ * execute_account_wipe - Permanently deletes an account from the registry
+ * @u: Pointer to the user to delete
+ *
+ * Return: void
+ */
 void execute_account_wipe(User *u) {
   User registrySnapshot[100];
   int count = 0;
