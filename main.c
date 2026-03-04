@@ -51,6 +51,9 @@ void display_main_menu(void) {
         while ((c = getchar()) != '\n' && c != EOF);
         return;
     }
+    
+    /* Clear the leftover newline from scanf */
+    getchar();
 
     switch (choice) {
         case 1:
@@ -95,6 +98,9 @@ void display_dashboard(void) {
         while ((c = getchar()) != '\n' && c != EOF);
         return;
     }
+    
+    /* Clear the leftover newline from scanf */
+    getchar();
 
     switch (choice) {
         case 1:
