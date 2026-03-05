@@ -2,7 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 #include "utils.h"
+
+/* Platform-specific includes for input_available */
+#ifdef _WIN32
+    #include <conio.h>    /* For _kbhit() on Windows */
+#else
+    #include <sys/select.h> /* For select() on Linux/macOS */
+    #include <unistd.h>
+#endif
 
 /**
  * clear_screen - Clears the terminal screen
@@ -13,9 +22,9 @@
 void clear_screen(void)
 {
 #ifdef _WIN32
-	system("cls");
+    system("cls");
 #else
-	system("clear");
+    system("clear");
 #endif
 }
 
@@ -28,7 +37,30 @@ void clear_screen(void)
  */
 void sanitize_input(char *buffer)
 {
-	buffer[strcspn(buffer, "\n")] = '\0';
+    buffer[strcspn(buffer, "\n")] = '\0';
+}
+
+/**
+ * acquire_lock - Creates a lock file to manage concurrency
+ *
+ * Description: Wait (busy-wait) until 'messages.lock' is gone, 
+ * then creates it to claim exclusive access to the database.
+ * Return: void
+ */
+void acquire_lock(void)
+{
+    FILE *file;
+    /* Busy-wait: Loop as long as the lock file exists */
+    while ((file = fopen("messages.lock", "r")) != NULL) {
+        fclose(file);
+    }
+
+    /* Create the lock file to signal other processes to wait */
+    file = fopen("messages.lock", "w");
+    if (file != NULL) {
+        fprintf(file, "locked");
+        fclose(file);
+    }
 }
 
 /**
@@ -39,7 +71,27 @@ void sanitize_input(char *buffer)
  */
 void release_lock(void)
 {
-	remove("messages.lock");
+    remove("messages.lock");
+}
+
+/**
+ * input_available - Checks if a key has been pressed without blocking
+ *
+ * Description: Monitors the input buffer. This allows the chat UI to 
+ * refresh with new messages even if the user isn't currently typing.
+ * Return: true if data is waiting in stdin, false otherwise.
+ */
+bool input_available(void)
+{
+#ifdef _WIN32
+    return _kbhit(); 
+#else
+    struct timeval tv = {0L, 0L}; 
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv) > 0;
+#endif
 }
 
 /**
@@ -51,12 +103,12 @@ void release_lock(void)
  */
 void generate_timestamp(char *buffer)
 {
-	time_t t;
-	struct tm *tm_info;
+    time_t t;
+    struct tm *tm_info;
 
-	t = time(NULL);
-	tm_info = localtime(&t);
-	strftime(buffer, 20, "%H:%M", tm_info);
+    t = time(NULL);
+    tm_info = localtime(&t);
+    strftime(buffer, 20, "%H:%M", tm_info);
 }
 
 /**
@@ -68,16 +120,16 @@ void generate_timestamp(char *buffer)
  */
 long fetch_byte_count(char *filename)
 {
-	FILE *file;
-	long size;
+    FILE *file;
+    long size;
 
-	file = fopen(filename, "r");
-	if (file == NULL)
-		return (-1);
+    file = fopen(filename, "r");
+    if (file == NULL)
+        return (-1);
 
-	fseek(file, 0, SEEK_END);
-	size = ftell(file);
-	fclose(file);
+    fseek(file, 0, SEEK_END);
+    size = ftell(file);
+    fclose(file);
 
-	return (size);
+    return (size);
 }
