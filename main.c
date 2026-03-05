@@ -171,7 +171,31 @@ void display_dashboard(void) {
 
   switch (choice) {
   case 1:
-    printf("Open Chat selected. (Module coming soon)\n");
+    //printf("Open Chat selected. (Module coming soon)\n");
+    //render_inbox(sessionUser);
+    if (choice == 1) {
+    // 1. Show the Inbox you built
+    render_inbox(sessionUser); 
+
+    // 2. Ask who they want to talk to
+    User partner;
+    printf("Enter username to chat with: ");
+    scanf("%s", partner.username);
+
+    // 3. Simple message input loop
+    char messageText[256];
+    printf("Type your message: ");
+    getchar(); // Clear the newline from previous enter
+    fgets(messageText, sizeof(messageText), stdin);
+    messageText[strcspn(messageText, "\n")] = 0; // Remove the enter key at the end
+
+    // 4. Call YOUR function to save it!
+    transmit_message(sessionUser, partner, messageText);
+    printf("Message sent successfully!\n");
+}
+
+
+
     printf("Press Enter to continue...");
     getchar();
     break;
