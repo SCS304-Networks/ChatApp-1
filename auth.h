@@ -21,6 +21,8 @@ void get_masked_password(char *password, int max_len);
 void execute_account_wipe(User *u);
 void terminate_session(User *u);
 
+/* change password functionality */
+void change_password(User *session);
 /* Utility function mentioned in flow */
 void strip_newline(char *str);
 

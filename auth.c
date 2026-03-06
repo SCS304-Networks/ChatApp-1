@@ -293,3 +293,57 @@ void execute_account_wipe(User *u) {
   printf("Press Enter to return...");
   getchar();
 }
+
+/**
+ * change_password - Changes the password for an authenticated user
+ * @session: Pointer to the user session
+ *
+ * Return: void
+ */
+void change_password(User *session)
+{
+    char oldpass[50], newpass[50];
+
+    clear_screen();
+    printf("--- Change Password ---\n");
+    printf("Current password: ");
+    get_masked_password(oldpass, sizeof oldpass);
+
+    if (strcmp(oldpass, session->password) != 0) {
+        printf("\n[!] Incorrect password.\nPress Enter to return...");
+        getchar();
+        return;
+    }
+
+    printf("New password: ");
+    get_masked_password(newpass, sizeof newpass);
+
+    if (is_invalid_input(newpass)) {
+        printf("\n[!] Invalid password.\nPress Enter to return...");
+        getchar();
+        return;
+    }
+
+    /* update registry file */
+    FILE *f = fopen(REGISTRY_FILE, "r");
+    FILE *tmp = fopen("data/tmp.txt", "w");
+    char file_user[50], file_pass[50];
+
+    while (fscanf(f, " %[^|]|%s ", file_user, file_pass) == 2) {
+        if (strcmp(file_user, session->username) == 0) {
+            toggle_encryption(newpass);
+            fprintf(tmp, "%s|%s\n", file_user, newpass);
+            toggle_encryption(newpass); /* restore session copy */
+            strcpy(session->password, newpass);
+        } else {
+            fprintf(tmp, "%s|%s\n", file_user, file_pass);
+        }
+    }
+    fclose(f);
+    fclose(tmp);
+    remove(REGISTRY_FILE);
+    rename("data/tmp.txt", REGISTRY_FILE);
+
+    printf("\n[+] Password changed successfully.\nPress Enter to continue...");
+    getchar();
+}
