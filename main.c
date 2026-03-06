@@ -156,9 +156,9 @@ void display_dashboard(void) {
   printf("    1. Open Chat with Partner\n");
   printf("    2. Search for a User\n");
   printf("    3. Deregister (Delete Account)\n");
-  printf("    4. Logout\n\n");
-  printf("----------------------------------------\n");
-  printf("    Choose an option: ");
+  printf("    4. Logout\n");
+  printf("    5. Change Password\n");
+  printf("\n    Choose an option: ");
 
   if (scanf(" %d", &choice) != 1) {
     int c;
@@ -210,6 +210,9 @@ void display_dashboard(void) {
   case 4:
     terminate_session(&sessionUser);
     is_logged_in = 0;
+    break;
+  case 5:
+    change_password(&sessionUser);
     break;
   default:
     printf("Invalid option. Press Enter to continue...");
