@@ -57,9 +57,14 @@ void search_user_flow(char *current_user) {
   printf("========================================\n\n");
 
   /* 2. Search Parameter Capture & Sanitization */
-  printf("Enter Target Username: ");
+  printf("Enter Target Username (or 'back' to return): ");
   fgets(target, 50, stdin);
   sanitize_input(target); /* */
+
+  /* Check for back option */
+  if (strcmp(target, "back") == 0) {
+    return;
+  }
 
   /* 3. Identity Verification (Self-Search Check) */
   if (strcmp(target, current_user) == 0) {
@@ -170,35 +175,53 @@ void display_dashboard(void) {
   getchar();
 
   switch (choice) {
-  case 1:
-    //printf("Open Chat selected. (Module coming soon)\n");
-    //render_inbox(sessionUser);
-    if (choice == 1) {
-    // 1. Show the Inbox you built
-    render_inbox(sessionUser); 
-
-    // 2. Ask who they want to talk to
+  case 1: {
+    // Phase 1: Partner Selection (The "Inbox")
+    int partner_selected = 0;
     User partner;
-    printf("Enter username to chat with: ");
-    scanf("%s", partner.username);
+    char partnerInput[50];
 
-    // 3. Simple message input loop
-    char messageText[256];
-    printf("Type your message: ");
-    getchar(); // Clear the newline from previous enter
-    fgets(messageText, sizeof(messageText), stdin);
-    messageText[strcspn(messageText, "\n")] = 0; // Remove the enter key at the end
+    while (!partner_selected) {
+      // Show the Inbox with past conversations
+      render_inbox(sessionUser); 
 
-    // 4. Call YOUR function to save it!
-    transmit_message(sessionUser, partner, messageText);
-    printf("Message sent successfully!\n");
-}
+      // Ask who they want to talk to
+      printf("Enter username to chat with (or 'back' to return): ");
+      fgets(partnerInput, sizeof(partnerInput), stdin);
+      sanitize_input(partnerInput);
 
+      // Check for back option
+      if (strcmp(partnerInput, "back") == 0) {
+        break;
+      }
 
+      // Self-chat check
+      if (strcmp(partnerInput, sessionUser.username) == 0) {
+        printf("\n[!] You cannot chat with yourself.\n");
+        printf("Press Enter to continue...");
+        getchar();
+        continue;
+      }
 
-    printf("Press Enter to continue...");
-    getchar();
+      // Registry check: Validate partner exists
+      if (!validate_partner(partnerInput)) {
+        printf("\n[!] ERROR: User '%s' not found in the directory.\n", partnerInput);
+        printf("Press Enter to continue...");
+        getchar();
+        continue;
+      }
+
+      // Partner validated - proceed to chat
+      strcpy(partner.username, partnerInput);
+      partner_selected = 1;
+    }
+
+    // Only launch chat engine if partner was selected
+    if (partner_selected) {
+      live_chat_engine(sessionUser, partner);
+    }
     break;
+  }
   case 2:
     /* Systematic Search implementation */
     search_user_flow(sessionUser.username);

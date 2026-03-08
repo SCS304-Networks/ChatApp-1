@@ -4,6 +4,14 @@
 #include "chat.h"
 #include "models.h"
 #include "utils.h"
+#include "auth.h"
+
+#ifdef _WIN32
+    #include <windows.h>
+    #include <conio.h>
+#else
+    #include <unistd.h>
+#endif
 
 /**
  * Filter and render the conversation log between the session user and a chosen partner.
@@ -113,4 +121,120 @@ void transmit_message(User me, User partner, char text[]) {
     // Resource Management: Close file handle and delete the .lock file to allow other users access
     fclose(file);
     release_lock(); 
+}
+
+/**
+ * validate_partner - Checks if a target username exists in the registry
+ * @username: The username to validate
+ *
+ * Return: 1 if found, 0 if not found
+ */
+int validate_partner(const char *username) {
+    FILE *f = fopen(REGISTRY_FILE, "r");
+    if (!f) return 0;
+
+    char file_user[50], file_pass[50];
+    while (fscanf(f, " %[^|]|%s ", file_user, file_pass) == 2) {
+        if (strcmp(file_user, username) == 0) {
+            fclose(f);
+            return 1; // Found
+        }
+    }
+    fclose(f);
+    return 0; // Not found
+}
+
+/**
+ * display_chat_header - Renders the chat session header
+ * @me: The current user
+ * @partner: The chat partner
+ */
+void display_chat_header(User me, User partner) {
+    printf("========================================\n");
+    printf("   CHAT SESSION: %s <--> %s        \n", me.username, partner.username);
+    printf("========================================\n\n");
+}
+
+/**
+ * live_chat_engine - The core real-time chat loop for the active session
+ * @me: The current session user
+ * @partner: The selected chat partner
+ *
+ * Description: Implements the Smart Refresh system using file byte-count
+ * comparison to detect new messages. Redraws the screen only when new data
+ * is detected. Uses non-blocking input detection to allow the user to type
+ * while the refresh loop runs. Exits when user types 'back'.
+ */
+void live_chat_engine(User me, User partner) {
+    long lastFileSize = -1;
+    long currentFileSize;
+    char msgBuffer[256];
+    int running = 1;
+
+    // Initial screen draw
+    clear_screen();
+    display_chat_header(me, partner);
+    display_chat_history(me, partner);
+    printf("\n----------------------------------------\n");
+    printf("You (type 'back' to return): ");
+    fflush(stdout);
+
+    while (running) {
+        // Phase 2: Smart Refresh - Check file size for changes
+        currentFileSize = fetch_byte_count("data/messages.txt");
+
+        // Only redraw if file size changed (new message received)
+        if (currentFileSize != lastFileSize && lastFileSize != -1) {
+            // Concurrency check before reading
+            acquire_lock();
+            
+            clear_screen();
+            display_chat_header(me, partner);
+            display_chat_history(me, partner);
+            printf("\n----------------------------------------\n");
+            printf("You (type 'back' to return): ");
+            fflush(stdout);
+            
+            release_lock();
+        }
+        lastFileSize = currentFileSize;
+
+        // Non-blocking input check
+        if (input_available()) {
+            // User started typing - capture full input
+            if (fgets(msgBuffer, sizeof(msgBuffer), stdin) != NULL) {
+                sanitize_input(msgBuffer);
+
+                // Check for exit command
+                if (strcmp(msgBuffer, "back") == 0) {
+                    running = 0;
+                    break;
+                }
+
+                // Don't send empty messages
+                if (strlen(msgBuffer) > 0) {
+                    // Phase 5: Sending a new message
+                    transmit_message(me, partner, msgBuffer);
+
+                    // Force refresh by resetting lastFileSize
+                    lastFileSize = -1;
+
+                    // Redraw immediately to show own message
+                    clear_screen();
+                    display_chat_header(me, partner);
+                    display_chat_history(me, partner);
+                    printf("\n----------------------------------------\n");
+                    printf("You (type 'back' to return): ");
+                    fflush(stdout);
+                }
+            }
+        }
+
+        // Polling interval: 200ms pause to prevent CPU spinning
+#ifdef _WIN32
+        Sleep(200);
+#else
+        usleep(200000);
+#endif
+    }
 }
