@@ -36,6 +36,7 @@ void display_chat_history(User me, User partner) {
  * This acts as the "Inbox" view for the user dashboard.
  */
 void render_inbox(User me) {
+    clear_screen();
     FILE *file = fopen("data/messages.txt", "r");
     char partners[100][50]; // Temporary memory to track unique usernames
     int count = 0;

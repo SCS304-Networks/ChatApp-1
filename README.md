@@ -76,4 +76,50 @@ git pull origin development
 
 ---
 
+## Building and Running the Application
+
+### Requirements
+
+- GCC compiler (e.g. [MinGW](https://www.mingw-w64.org/) on Windows or `gcc` on Linux/macOS)
+
+### 1. Compile the Code
+
+Navigate into the project folder and run:
+
+```
+gcc main.c auth.c chat.c utils.c -o chatapp
+```
+
+### 2. Run the Application
+
+**On Windows:**
+
+```
+.\chatapp.exe
+```
+
+**On Linux/macOS:**
+
+```
+./chatapp
+```
+
+### 3. Merge Development into Main
+
+```
+git checkout main
+git pull origin main
+git merge development
+```
+
+If there are untracked files causing conflicts (e.g. `README.md`), stage them first:
+
+```
+git add README.md
+git commit -m "Add README.md before merge"
+git merge development
+```
+
+---
+
 For more git commands and help, see [Git Documentation](https://git-scm.com/doc).
